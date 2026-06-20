@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Workout Platform</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <div class="nav-brand"><h2>💪 Workout Platform</h2></div>
+      <div class="nav-menu">
+        <a href="dashboard.html" class="nav-link active">Dashboard</a>
+        <a href="trainers.html" class="nav-link">Trainers</a>
+        <a href="plans.html" class="nav-link">My Plans</a>
+        <a href="profile.html" class="nav-link">Profile</a>
+        <button onclick="logout()" class="btn btn-secondary btn-sm">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div id="error-message" class="alert alert-error" style="display: none;"></div>
+    <div id="success-message" class="alert alert-success" style="display: none;"></div>
+
+    <div class="dashboard-header">
+      <h1>Welcome, <span id="user-name">User</span>!</h1>
+      <span id="subscription-badge" class="badge-free">Free</span>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">📏</div>
+        <div class="stat-content">
+          <h3>Height</h3>
+          <p id="stat-height">--</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">⚖️</div>
+        <div class="stat-content">
+          <h3>Weight</h3>
+          <p id="stat-weight">--</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🧑‍🏫</div>
+        <div class="stat-content">
+          <h3>Role</h3>
+          <p id="stat-role">Client</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">⭐</div>
+        <div class="stat-content">
+          <h3>Status</h3>
+          <p id="stat-status">Free Member</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions-section">
+      <h2>Quick Actions</h2>
+      <div class="action-buttons">
+        <a href="trainers.html" class="btn btn-primary">Browse Trainers</a>
+        <a href="profile.html" class="btn btn-secondary">Update Profile</a>
+        <button id="upgrade-btn" onclick="upgradeToPremium()" class="btn btn-success" style="display:none;">
+          ⭐ Upgrade to Premium
+        </button>
+        <button id="downgrade-btn" onclick="downgradeToFree()" class="btn btn-secondary" style="display:none;">
+          Cancel Subscription
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/utils.js"></script>
+
+  <script>
+    if (!auth.requireAuth()) { /* redirects */ }
+
+    async function loadDashboard() {
+      try {
+        
+        const response = await API.getProfile();
+        const user = response.data;
+
+        auth.updateUser({
+  id: user.id,
+  email: user.email,
+  fullName: user.fullName,
+  height: user.height,
+  weight: user.weight,
+  isSubscribed: user.isSubscribed,
+  role: user.role || 'user',
+  coachBio: user.coachBio || null,
+  coachSpecialty: user.coachSpecialty || null,
+  coachExperience: user.coachExperience || null
+});
+
+        document.getElementById('user-name').textContent = user.fullName || user.email;
+        document.getElementById('stat-height').textContent = user.height ? `${user.height} cm` : 'Not set';
+        document.getElementById('stat-weight').textContent = user.weight ? `${user.weight} kg` : 'Not set';
+        document.getElementById('stat-role').textContent = user.role === 'coach' ? 'Coach' : 'Client';
+
+        if (user.isSubscribed) {
+          document.getElementById('stat-status').textContent = 'Premium Member ⭐';
+          document.getElementById('subscription-badge').textContent = 'Premium';
+          document.getElementById('subscription-badge').className = 'badge-premium';
+          document.getElementById('downgrade-btn').style.display = 'inline-block';
+          document.getElementById('upgrade-btn').style.display = 'none';
+        } else {
+          document.getElementById('stat-status').textContent = 'Free Member';
+          document.getElementById('subscription-badge').textContent = 'Free';
+          document.getElementById('subscription-badge').className = 'badge-free';
+          document.getElementById('upgrade-btn').style.display = 'inline-block';
+          document.getElementById('downgrade-btn').style.display = 'none';
+        }
+
+      } catch (error) {
+        showError('Failed to load dashboard');
+      }
+    }
+
+    async function upgradeToPremium() {
+      if (!confirm('Upgrade to Premium? You will gain access to all workout plans.')) return;
+
+      try {
+        const response = await API.updateSubscription(1);
+        if (response.status === 'success') {
+        
+          auth.updateUser(response.data);
+          showSuccess('Upgraded to Premium! 🎉');
+          loadDashboard(); 
+        }
+      } catch (error) {
+        showError('Failed to upgrade subscription');
+      }
+    }
+
+    async function downgradeToFree() {
+      if (!confirm('Cancel your subscription? You will lose access to workout plans.')) return;
+
+      try {
+        const response = await API.updateSubscription(0);
+        if (response.status === 'success') {
+          auth.updateUser(response.data);
+          showSuccess('Subscription cancelled.');
+          loadDashboard();
+        }
+      } catch (error) {
+        showError('Failed to update subscription');
+      }
+    }
+
+    loadDashboard();
+  </script>
+</body>
+</html>

@@ -1,0 +1,131 @@
+
+!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Workout Platform</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/auth.css">
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-card">
+      <div class="auth-header">
+        <h1>💪 Workout Platform</h1>
+        <p>Login to your account</p>
+      </div>
+
+      <div id="error-message" class="alert alert-error" style="display: none;"></div>
+
+      <form id="login-form">
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" placeholder="Enter your email" required>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" placeholder="Enter your password" required>
+        </div>
+
+        <button type="submit" id="login-btn" class="btn btn-primary btn-block">Login</button>
+      </form>
+
+      <div class="auth-footer">
+        <p>Don't have an account? <a href="register.html">Create Account</a></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cookie Consent Banner -->
+  <div id="cookie-banner" class="cookie-banner">
+    <div class="cookie-banner-content">
+      <div class="cookie-text">
+        <h3>🍪 We use cookies</h3>
+        <p>We use cookies to improve your experience and analyze site usage. Essential cookies are required for the site to function.</p>
+      </div>
+      <div class="cookie-options">
+        <div class="cookie-option">
+          <input type="checkbox" id="essential-cookies" checked disabled>
+          <label for="essential-cookies">
+            <strong>Essential Cookies</strong>
+            <span>Required for login, security, and core functionality. Cannot be disabled.</span>
+          </label>
+        </div>
+        <div class="cookie-option">
+          <input type="checkbox" id="analytics-cookies" checked>
+          <label for="analytics-cookies">
+            <strong>Analytics Cookies</strong>
+            <span>Help us understand how you use the site so we can improve it.</span>
+          </label>
+        </div>
+      </div>
+      <div class="cookie-buttons">
+        <button id="accept-all-cookies" class="btn btn-primary">Accept All</button>
+        <button id="reject-non-essential-cookies" class="btn btn-secondary">Reject Non-Essential</button>
+        <a href="https://www.example.com/privacy" target="_blank" class="privacy-link">Privacy Policy</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts: CORRECT ORDER — auth first, then api, utils, cookies last -->
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/utils.js"></script>
+  
+
+  <script>
+    // Redirect if already logged in
+    if (auth.isAuthenticated()) {
+      window.location.href = 'dashboard.html';
+    }
+
+    // Handle login form submission
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!email || !password) {
+        showError('Please enter both email and password');
+        return;
+      }
+
+      const btn = document.getElementById('login-btn');
+      btn.disabled = true;
+      btn.textContent = 'Logging in...';
+
+      try {
+        const response = await API.login(email, password);
+
+        // Save authentication with ALL 3 : token, sessionToken, user
+        auth.setAuth(response.token, response.sessionToken, {
+          id: response.user.id,
+          email: response.user.email,
+          fullName: response.user.fullName,
+          isSubscribed: response.user.isSubscribed || 0,
+          role: response.user.role || 'user',
+          coachBio: response.user.coachBio || null,
+          coachSpecialty: response.user.coachSpecialty || null,
+          coachExperience: response.user.coachExperience || null
+        });
+
+       const loggedInUser = auth.getUser();
+
+if (loggedInUser.role === 'coach') {
+  window.location.href = 'coach-dashboard.html';
+} else {
+  window.location.href = 'dashboard.html';
+}
+
+      } catch (error) {
+        showError(error.message || 'Login failed. Please check your credentials.');
+        btn.disabled = false;
+        btn.textContent = 'Login';
+      }
+    });
+  </script>
+</body>
+</html>

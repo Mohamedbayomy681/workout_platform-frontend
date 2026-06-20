@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register - Workout Platform</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/auth.css">
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-card">
+      <div class="auth-header">
+        <h1>💪 Workout Platform</h1>
+        <p>Create your account</p>
+      </div>
+
+      <div id="error-message" class="alert alert-error" style="display: none;"></div>
+
+      <form id="register-form">
+        <div class="form-group">
+          <label for="email">Email <span class="required">*</span></label>
+          <input type="email" id="email" placeholder="Enter your email" required>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password <span class="required">*</span></label>
+          <input type="password" id="password" placeholder="Min 8 chars, upper, lower, number, special" required>
+        </div>
+
+        <div class="form-group">
+          <label for="fullName">Full Name <span class="required">*</span></label>
+          <input type="text" id="fullName" placeholder="Enter your full name" required>
+        </div>
+
+        <div class="form-group">
+          <label for="role">Account Type</label>
+          <select id="role">
+            <option value="user" selected>Client</option>
+            <option value="coach">Coach</option>
+          </select>
+        </div>
+
+        <div id="coach-fields" style="display: none;">
+          <div class="form-group">
+            <label for="coachBio">Coach Bio</label>
+            <textarea id="coachBio" rows="3" placeholder="Tell clients what makes you a great coach"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="coachSpecialty">Specialty</label>
+            <input type="text" id="coachSpecialty" placeholder="e.g. Strength, HIIT, Nutrition">
+          </div>
+          <div class="form-group">
+            <label for="coachExperience">Experience</label>
+            <input type="text" id="coachExperience" placeholder="e.g. 5 years coaching clients">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="height">Height (cm)</label>
+            <input type="number" id="height" placeholder="e.g. 175" min="50" max="300">
+          </div>
+          <div class="form-group">
+            <label for="weight">Weight (kg)</label>
+            <input type="number" id="weight" placeholder="e.g. 70" min="20" max="500">
+          </div>
+        </div>
+
+        <button type="submit" id="register-btn" class="btn btn-primary btn-block">Create Account</button>
+      </form>
+
+      <div class="auth-footer">
+        <p>Already have an account? <a href="index.html">Login</a></p>
+      </div>
+    </div>
+  </div>
+
+  
+  <div id="cookie-banner" class="cookie-banner">
+    <div class="cookie-banner-content">
+      <div class="cookie-text">
+        <h3>🍪 We use cookies</h3>
+        <p>We use cookies to improve your experience and analyze site usage. Essential cookies are required for the site to function.</p>
+      </div>
+      <div class="cookie-options">
+        <div class="cookie-option">
+          <input type="checkbox" id="essential-cookies" checked disabled>
+          <label for="essential-cookies">
+            <strong>Essential Cookies</strong>
+            <span>Required for login, security, and core functionality. Cannot be disabled.</span>
+          </label>
+        </div>
+        <div class="cookie-option">
+          <input type="checkbox" id="analytics-cookies" checked>
+          <label for="analytics-cookies">
+            <strong>Analytics Cookies</strong>
+            <span>Help us understand how you use the site so we can improve it.</span>
+          </label>
+        </div>
+      </div>
+      <div class="cookie-buttons">
+        <button id="accept-all-cookies" class="btn btn-primary">Accept All</button>
+        <button id="reject-non-essential-cookies" class="btn btn-secondary">Reject Non-Essential</button>
+        <a href="https://www.example.com/privacy" target="_blank" class="privacy-link">Privacy Policy</a>
+      </div>
+    </div>
+  </div>
+
+  
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/utils.js"></script>
+  
+
+  <script>
+    // Redirect if already logged in
+    if (auth.isAuthenticated()) {
+      window.location.href = 'dashboard.html';
+    }
+
+    document.getElementById('role').addEventListener('change', (e) => {
+      const coachFields = document.getElementById('coach-fields');
+      coachFields.style.display = e.target.value === 'coach' ? 'block' : 'none';
+    });
+
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const fullName = document.getElementById('fullName').value.trim();
+      const height = document.getElementById('height').value || null;
+      const weight = document.getElementById('weight').value || null;
+
+      // Client-side validation
+      const role = document.getElementById('role').value;
+      const coachBio = document.getElementById('coachBio').value.trim();
+      const coachSpecialty = document.getElementById('coachSpecialty').value.trim();
+      const coachExperience = document.getElementById('coachExperience').value.trim();
+
+      if (!email || !password || !fullName) {
+        showError('Please fill in all required fields');
+        return;
+      }
+      if (!isValidEmail(email)) {
+        showError('Please enter a valid email address');
+        return;
+      }
+      if (!isStrongPassword(password)) {
+        showError('Password must be at least 8 characters with uppercase, lowercase, number, and special character');
+        return;
+      }
+      if (role === 'coach' && (!coachBio || !coachSpecialty)) {
+        showError('Coaches must provide a bio and specialty');
+        return;
+      }
+
+      const btn = document.getElementById('register-btn');
+      btn.disabled = true;
+      btn.textContent = 'Creating Account...';
+
+      const payload = { email, password, fullName, height, weight, role };
+      if (role === 'coach') {
+        payload.coachBio = coachBio;
+        payload.coachSpecialty = coachSpecialty;
+        payload.coachExperience = coachExperience || null;
+      }
+
+      try {
+        const response = await API.register(payload);
+
+        // Save authentication with ALL 3 params
+        auth.setAuth(response.token, response.sessionToken, {
+          id: response.user.id,
+          email: response.user.email,
+          fullName: response.user.fullName,
+          isSubscribed: response.user.isSubscribed || 0,
+          role: response.user.role || 'user',
+          coachBio: response.user.coachBio || null,
+          coachSpecialty: response.user.coachSpecialty || null,
+          coachExperience: response.user.coachExperience || null
+        });
+
+       const registeredUser = auth.getUser();
+
+if (registeredUser.role === 'coach') {
+  window.location.href = 'coach-dashboard.html';
+} else {
+  window.location.href = 'dashboard.html';
+}
+
+      } catch (error) {
+        showError(error.message || 'Registration failed. Please try again.');
+        btn.disabled = false;
+        btn.textContent = 'Create Account';
+      }
+    });
+  </script>
+</body>
+</html>

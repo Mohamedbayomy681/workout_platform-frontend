@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile - Workout Platform</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <div class="nav-brand"><h2>💪 Workout Platform</h2></div>
+      <div class="nav-menu">
+        <a href="dashboard.html" class="nav-link">Dashboard</a>
+        <a href="trainers.html" class="nav-link">Trainers</a>
+        <a href="plans.html" class="nav-link">My Plans</a>
+        <a href="profile.html" class="nav-link active">Profile</a>
+        <button onclick="logout()" class="btn btn-secondary btn-sm">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div id="error-message" class="alert alert-error" style="display: none;"></div>
+    <div id="success-message" class="alert alert-success" style="display: none;"></div>
+
+    <div class="page-header">
+      <h1>Your Profile</h1>
+    </div>
+
+    <!-- Profile Form -->
+    <div class="profile-card">
+      <form id="profile-form">
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" disabled>
+        </div>
+        <div class="form-group">
+          <label for="fullName">Full Name</label>
+          <input type="text" id="fullName" placeholder="Enter your full name">
+        </div>
+        <div class="form-group">
+          <label for="role">Account Type</label>
+          <input type="text" id="role" disabled>
+        </div>
+        <div id="coach-profile-fields" style="display: none;">
+          <div class="form-group">
+            <label for="coachBio">Coach Bio</label>
+            <textarea id="coachBio" rows="3"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="coachSpecialty">Specialty</label>
+            <input type="text" id="coachSpecialty">
+          </div>
+          <div class="form-group">
+            <label for="coachExperience">Experience</label>
+            <input type="text" id="coachExperience">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="height">Height (cm)</label>
+            <input type="number" id="height" placeholder="e.g. 175" min="50" max="300">
+          </div>
+          <div class="form-group">
+            <label for="weight">Weight (kg)</label>
+            <input type="number" id="weight" placeholder="e.g. 70" min="20" max="500">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Subscription Status</label>
+          <p id="sub-status" class="sub-status-text">Loading...</p>
+        </div>
+
+        <button type="submit" id="save-btn" class="btn btn-primary">Save Changes</button>
+      </form>
+    </div>
+
+  </div>
+
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/utils.js"></script>
+
+  <script>
+    if (!auth.requireAuth()) { /* redirects */ }
+
+    // Load profile from API 
+    async function loadProfile() {
+      try {
+        const response = await API.getProfile();
+        const user = response.data;
+
+        document.getElementById('email').value = user.email;
+        document.getElementById('fullName').value = user.fullName || '';
+        document.getElementById('role').value = user.role === 'coach' ? 'Coach' : 'Client';
+        document.getElementById('height').value = user.height || '';
+        document.getElementById('weight').value = user.weight || '';
+        document.getElementById('sub-status').textContent =
+          user.isSubscribed ? '⭐ Premium Member' : 'Free Member';
+        document.getElementById('sub-status').className =
+          user.isSubscribed ? 'sub-status-text premium' : 'sub-status-text free';
+
+        const isCoach = user.role === 'coach';
+        document.getElementById('coach-profile-fields').style.display = isCoach ? 'block' : 'none';
+        document.getElementById('coachBio').value = user.coachBio || '';
+        document.getElementById('coachSpecialty').value = user.coachSpecialty || '';
+        document.getElementById('coachExperience').value = user.coachExperience || '';
+
+        // Sync localStorage with fresh backend data
+        auth.updateUser({
+          id: user.id,
+          email: user.email,
+          fullName: user.fullName,
+          isSubscribed: user.isSubscribed,
+          role: user.role || 'user',
+          coachBio: user.coachBio || null,
+          coachSpecialty: user.coachSpecialty || null,
+          coachExperience: user.coachExperience || null
+        });
+
+      } catch (error) {
+        showError('Failed to load profile');
+      }
+    }
+
+    document.getElementById('profile-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const fullName = document.getElementById('fullName').value.trim();
+      const height = document.getElementById('height').value || null;
+      const weight = document.getElementById('weight').value || null;
+      const isCoach = document.getElementById('role').value === 'Coach';
+      const coachBio = document.getElementById('coachBio').value.trim();
+      const coachSpecialty = document.getElementById('coachSpecialty').value.trim();
+      const coachExperience = document.getElementById('coachExperience').value.trim();
+
+      if (!fullName || fullName.length < 2) {
+        showError('Full name must be at least 2 characters');
+        return;
+      }
+
+      const btn = document.getElementById('save-btn');
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+
+      try {
+        const payload = { fullName, height, weight };
+        if (isCoach) {
+          payload.coachBio = coachBio || null;
+          payload.coachSpecialty = coachSpecialty || null;
+          payload.coachExperience = coachExperience || null;
+        }
+        const response = await API.updateProfile(payload);
+
+        if (response.status === 'success') {
+          auth.updateUser(response.data);
+
+          showSuccess('Profile updated successfully!');
+          loadProfile();
+        }
+      } catch (error) {
+        showError(error.message || 'Failed to update profile');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Save Changes';
+      }
+    });
+    
+    loadProfile();
+  </script>
+</body>
+</html>

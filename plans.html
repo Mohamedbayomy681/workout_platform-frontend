@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Plans - Workout Platform</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <div class="nav-brand"><h2>💪 Workout Platform</h2></div>
+      <div class="nav-menu">
+        <a href="dashboard.html" class="nav-link">Dashboard</a>
+        <a href="trainers.html" class="nav-link">Trainers</a>
+        <a href="plans.html" class="nav-link active">My Plans</a>
+        <a href="profile.html" class="nav-link">Profile</a>
+        <button onclick="logout()" class="btn btn-secondary btn-sm">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div id="error-message" class="alert alert-error" style="display: none;"></div>
+    <div id="success-message" class="alert alert-success" style="display: none;"></div>
+
+    <div class="page-header">
+      <h1 id="page-title">My Workout Plans</h1>
+      <p>Access your personalized training programs</p>
+    </div>
+
+    <!-- Subscription warning — shown when API returns 403 -->
+    <div id="subscription-warning" class="alert alert-warning" style="display: none;">
+      <strong>Premium Subscription Required</strong>
+      <p>You need a premium subscription to access workout plans.</p>
+      <a href="dashboard.html" class="btn btn-success" style="margin-top: 10px;">⭐ Upgrade to Premium</a>
+    </div>
+
+    <div id="plans-container">
+      <div class="loading">Loading workout plans...</div>
+    </div>
+  </div>
+
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/utils.js"></script>
+
+  <script>
+    if (!auth.requireAuth()) { /* redirects */ }
+
+    async function loadPlans() {
+      const container = document.getElementById('plans-container');
+      const urlParams = new URLSearchParams(window.location.search);
+      const trainerId = urlParams.get('trainer');
+
+      try {
+        let response;
+        if (trainerId) {
+          response = await API.getTrainerPlans(trainerId);
+          if (response.trainer) {
+            document.getElementById('page-title').textContent =
+              `${response.trainer.name}'s Workout Plans`;
+          }
+        } else {
+          // Load all plans
+          response = await API.getAllPlans();
+        }
+
+        const plans = response.data;
+
+        if (!plans || plans.length === 0) {
+          container.innerHTML = '<p class="no-data">No workout plans available</p>';
+          return;
+        }
+
+        // Group plans by trainer (for the "all plans" view)
+        const plansByTrainer = {};
+        plans.forEach(plan => {
+          const trainerName = plan.TRAINER_NAME || 'Trainer';
+          if (!plansByTrainer[trainerName]) {
+            plansByTrainer[trainerName] = [];
+          }
+          plansByTrainer[trainerName].push(plan);
+        });
+
+        let html = '';
+        for (const [trainerName, trainerPlans] of Object.entries(plansByTrainer)) {
+          html += `
+            <div class="trainer-section">
+              <h2>${trainerName}'s Workout Plans</h2>
+              <div class="plans-grid">
+                ${trainerPlans.map(plan => `
+                  <div class="plan-card">
+                    <div class="plan-header">
+                      <h3>${plan.TITLE}</h3>
+                      <span class="plan-level">Plan ${plan.PLAN_NUMBER || 1}</span>
+                    </div>
+                    <p class="plan-description">${plan.DESCRIPTION}</p>
+                    <p><strong>Exercises:</strong></p>
+                    <p>${plan.EXERCISES || 'No exercises added'}</p>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        }
+
+        container.innerHTML = html;
+
+      } catch (error) {
+
+        if (error.message && (error.message.includes('subscription') || error.message.includes('403'))) {
+          document.getElementById('subscription-warning').style.display = 'block';
+          container.style.display = 'none';
+        } else {
+          container.innerHTML = '<p class="error">Failed to load workout plans. Is the server running?</p>';
+        }
+      }
+    }
+
+    loadPlans();
+  </script>
+</body>
+</html>

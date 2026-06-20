@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Coach Dashboard</title>
+</head>
+<body>
+
+<h1>Coach Dashboard</h1>
+
+<p>Welcome Coach!</p>
+
+<button id="logoutBtn">Logout</button>
+
+<hr>
+
+<form id="planForm">
+    <input type="text" id="title" placeholder="Plan Title" required>
+    <br><br>
+
+    <textarea id="description" placeholder="Plan Description" required></textarea>
+    <br><br>
+
+    <textarea id="exercises" placeholder="Exercises" required></textarea>
+    <br><br>
+
+    <button type="submit">Submit Plan</button>
+</form>
+
+<script>
+document.getElementById('logoutBtn').addEventListener('click', () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('sessionToken');
+    localStorage.removeItem('user');
+
+    window.location.href = 'index.html';
+});
+
+document.getElementById('planForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const title = document.getElementById('title').value;
+    const description = document.getElementById('description').value;
+    const exercises = document.getElementById('exercises').value;
+
+    const token = localStorage.getItem('token');
+
+    try {
+        const response = await fetch('http://localhost:3000/api/plans/createplan', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                title,
+                description,
+                exercises
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            alert('Plan submitted successfully!');
+            document.getElementById('planForm').reset();
+        } else {
+            alert(data.message);
+        }
+
+    } catch (error) {
+        alert('Error submitting plan');
+    }
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trainers - Workout Platform</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <div class="nav-brand"><h2>💪 Workout Platform</h2></div>
+      <div class="nav-menu">
+        <a href="dashboard.html" class="nav-link">Dashboard</a>
+        <a href="trainers.html" class="nav-link active">Trainers</a>
+        <a href="plans.html" class="nav-link">My Plans</a>
+        <a href="profile.html" class="nav-link">Profile</a>
+        <button onclick="logout()" class="btn btn-secondary btn-sm">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div id="error-message" class="alert alert-error" style="display: none;"></div>
+
+    <div class="page-header">
+      <h1>Our Expert Trainers</h1>
+      <p>Choose from our team of certified fitness professionals</p>
+    </div>
+
+    <div id="trainers-container" class="trainers-grid">
+      <div class="loading">Loading trainers...</div>
+    </div>
+  </div>
+
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/utils.js"></script>
+
+  <script>
+    if (!auth.requireAuth()) { /* redirects */ }
+
+    async function loadTrainers() {
+      const container = document.getElementById('trainers-container');
+
+      try {
+        const response = await API.getTrainers();
+        const trainers = response.data;
+
+        if (!trainers || trainers.length === 0) {
+          container.innerHTML = '<p class="no-data">No trainers available</p>';
+          return;
+        }
+
+        container.innerHTML = trainers.map(trainer => `
+          <div class="trainer-card">
+            <img
+              src="${API.getTrainerImageUrl(trainer.IMAGE_PATH)}"
+              alt="${trainer.NAME}"
+              class="trainer-image"
+              onerror="this.style.display='none'"
+            >
+            <div class="trainer-content">
+              <h3>${trainer.NAME}</h3>
+              <p class="trainer-description">${trainer.DESCRIPTION}</p>
+              <button
+                onclick="viewTrainerPlans(${trainer.ID}, '${trainer.NAME.replace(/'/g, "\\'")}')"
+                class="btn btn-primary"
+              >
+                View Workout Plans
+              </button>
+            </div>
+          </div>
+        `).join('');
+
+      } catch (error) {
+        container.innerHTML = '<p class="error">Failed to load trainers</p>';
+      }
+    }
+    function viewTrainerPlans(trainerId, trainerName) {
+      window.location.href = `plans.html?trainer=${trainerId}`;
+    }
+
+    loadTrainers();
+  </script>
+</body>
+</html>
